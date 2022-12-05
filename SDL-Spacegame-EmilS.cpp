@@ -191,6 +191,7 @@ int main(int argc, char* args[])
 			//While application is running
 			while (!quit)
 			{
+				Uint64 StartLoopTick = SDL_GetPerformanceCounter();
 				//SDL_Delay(300);
 				//Handle events on queue
 				while (SDL_PollEvent(&e) != 0)
@@ -211,27 +212,27 @@ int main(int argc, char* args[])
 							break;
 							
 						case SDLK_DOWN:
-							if (PlayerY + PlayerSize + 3 > SCREEN_WIDTH)
+							if (PlayerY + PlayerSize + 2 > SCREEN_WIDTH)
 							{
 								break;
 							}
-							PlayerY = PlayerY + 3;
+							PlayerY = PlayerY + 2;
 							break;
 
 						case SDLK_LEFT:
-							if (PlayerX - 3 < 0)
+							if (PlayerX - 2 < 0)
 							{
 								break;
 							}
-							PlayerX = PlayerX - 3;
+							PlayerX = PlayerX - 2;
 							break;
 
 						case SDLK_RIGHT:
-							if (PlayerX + PlayerSize + 3 > SCREEN_HEIGHT)
+							if (PlayerX + PlayerSize + 2 > SCREEN_HEIGHT)
 							{
 								break;
 							}
-							PlayerX = PlayerX + 3;
+							PlayerX = PlayerX + 2;
 							break;
 
 						default:
@@ -251,7 +252,7 @@ int main(int argc, char* args[])
 				//shot go up
 				if (ShotActive)
 				{
-					ShotY = ShotY - 1;
+					ShotY = ShotY - 3;
 					if (ShotY < 0)
 					{
 						ShotActive = false;
@@ -278,6 +279,12 @@ int main(int argc, char* args[])
 
 				//Update screen
 				SDL_RenderPresent(gRenderer);
+
+				Uint64 EndLoopTick = SDL_GetPerformanceCounter();
+				float elapsedMS = (EndLoopTick - StartLoopTick) / (float)SDL_GetPerformanceFrequency() * 1000.0f;
+
+				// Cap to 60 FPS
+				SDL_Delay(floor(16.666f - elapsedMS));
 			}
 		}
 	}
