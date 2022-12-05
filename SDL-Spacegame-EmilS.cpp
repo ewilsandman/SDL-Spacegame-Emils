@@ -6,17 +6,31 @@
 #include <cmath>
 
 //Screen dimension constants
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
+const int SCREEN_WIDTH = 800;
+const int SCREEN_HEIGHT = 800;
 
 //Start pos const
 
 //player pos values
-int PlayerX = 0;
-int PlayerY = 0;
 int PlayerSize = 50;
+int PlayerX = SCREEN_WIDTH /2 - PlayerSize /2;
+int PlayerY = SCREEN_HEIGHT - PlayerSize;
 
-//Store key state
+//player shot values
+bool ShotActive = false;
+int ShotX = 0;
+int ShotY = SCREEN_HEIGHT - PlayerSize * 2;
+int ShotLenght = 10;
+
+//Enemy settings
+int MaxWaves = 2;
+int EnemiesPerWave = 3;
+float TimeBetweenWaves;
+int EnemySize;
+
+
+
+//Store key state (unused)
 
 enum KeyPress
 {
@@ -33,11 +47,19 @@ bool init();
 //Loads media
 bool loadMedia();
 
-//Frees media and shuts down SDL
+//Handles Enemies;
+void handleEnemy(int);
+///Ideas for handling enemies
+/// Bool[], flip bool to false when hit, use relative distance between enemies, move in sync
+/// Enemy[], similar to first but now enemies can be diffrent, operate independently
+///
+void playerShoot();
+
+//shuts down SDL
 void close();
 
 //Loads individual image as texture
-SDL_Texture* loadTexture(std::string path);
+//SDL_Texture* loadTexture(std::string path);
 
 //The window we'll be rendering to
 SDL_Window* gWindow = NULL;
@@ -65,7 +87,7 @@ bool init()
 		}
 
 		//Create window
-		gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+		gWindow = SDL_CreateWindow("SDL Spacegame thing", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 		if (gWindow == NULL)
 		{
 			printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
@@ -85,7 +107,7 @@ bool init()
 				//Initialize renderer color	
 				SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
 
-				//Initialize PNG loading
+				//Initialize PNG loading (currently unused)
 				int imgFlags = IMG_INIT_PNG;
 				if (!(IMG_Init(imgFlags) & imgFlags))
 				{
@@ -108,6 +130,28 @@ bool loadMedia()
 	return success;
 }
 
+void handleEnemy(int)
+{
+
+}
+
+void playerShoot()
+{
+	char ShotBuffer[50];
+	if (ShotActive) // preventing player from shooting more than one shot
+	{
+
+	}
+	else
+	{
+		ShotX = PlayerX + PlayerSize / 2;
+		ShotY = SCREEN_HEIGHT - PlayerSize;
+		sprintf_s(ShotBuffer, "Firing shot %d", ShotY);
+		SDL_LogInfo(0, ShotBuffer);
+		ShotActive = true;
+	}
+}
+
 void close()
 {
 	//Destroy window	
@@ -123,6 +167,7 @@ void close()
 
 int main(int argc, char* args[])
 {
+	char buffer[50];
 	//Start up SDL and create window
 	if (!init())
 	{
@@ -130,7 +175,7 @@ int main(int argc, char* args[])
 	}
 	else
 	{
-		//Load media
+		//Load media (unused)
 		if (!loadMedia())
 		{
 			printf("Failed to load media!\n");
@@ -146,6 +191,7 @@ int main(int argc, char* args[])
 			//While application is running
 			while (!quit)
 			{
+				//SDL_Delay(300);
 				//Handle events on queue
 				while (SDL_PollEvent(&e) != 0)
 				{
@@ -154,41 +200,38 @@ int main(int argc, char* args[])
 					{
 						quit = true;
 					}
-					else if (e.type == SDL_KEYDOWN)
+					else if (e.type == SDL_KEYDOWN) // this part is quite hacky, might fix later
 					{
 						//Select surfaces based on key press
 						switch (e.key.keysym.sym)
 						{
-						case SDLK_UP:
-							if (PlayerY - 1 <0)
-							{
-								break;
-							}
-							PlayerY = PlayerY - 1;
-							break;
 
+						case SDLK_UP:
+						playerShoot();
+							break;
+							
 						case SDLK_DOWN:
-							if (PlayerY + PlayerSize + 1 > SCREEN_WIDTH)
+							if (PlayerY + PlayerSize + 3 > SCREEN_WIDTH)
 							{
 								break;
 							}
-							PlayerY = PlayerY + 1;
+							PlayerY = PlayerY + 3;
 							break;
 
 						case SDLK_LEFT:
-							if (PlayerX - 1 < 0)
+							if (PlayerX - 3 < 0)
 							{
 								break;
 							}
-							PlayerX = PlayerX - 1;
+							PlayerX = PlayerX - 3;
 							break;
 
 						case SDLK_RIGHT:
-							if (PlayerX + PlayerSize + 1 > SCREEN_HEIGHT)
+							if (PlayerX + PlayerSize + 3 > SCREEN_HEIGHT)
 							{
 								break;
 							}
-							PlayerX = PlayerX + 1;
+							PlayerX = PlayerX + 3;
 							break;
 
 						default:
@@ -196,26 +239,42 @@ int main(int argc, char* args[])
 						}
 					}
 				}
-
 				//Clear screen
-				SDL_SetRenderDrawColor(gRenderer, 255, 255, 255, 255);
+				SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, 0);
 				SDL_RenderClear(gRenderer);
 
-				//Render red filled quad
+				//Draw player
 				SDL_Rect fillRect = { PlayerX, PlayerY,  PlayerSize,  PlayerSize   };
-				SDL_SetRenderDrawColor(gRenderer, 0xFF, 0x00, 0x00, 0xFF);
+				SDL_SetRenderDrawColor(gRenderer, 255, 0, 0, 255);
 				SDL_RenderFillRect(gRenderer, &fillRect);
 
-				//Draw blue horizontal line
-				SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0xFF, 0xFF);
+				//shot go up
+				if (ShotActive)
+				{
+					ShotY = ShotY - 1;
+					if (ShotY < 0)
+					{
+						ShotActive = false;
+						sprintf_s(buffer, "Disabling shot %d", ShotY);
+						SDL_LogInfo(0, buffer);
+					}
+					else
+					{
+						sprintf_s(buffer, "Shot traversing %d", ShotY);
+						SDL_LogInfo(0, buffer);
+					}
+					SDL_SetRenderDrawColor(gRenderer, 100, 255, 255, 255);
+					SDL_Rect shotRect = { ShotX, ShotY, ShotLenght / 2, ShotLenght};
+					SDL_RenderFillRect(gRenderer, &shotRect);
+				}
+
+				//Draw midscreen horisontal line
+				SDL_SetRenderDrawColor(gRenderer, 0, 0, 255, 255);
 				SDL_RenderDrawLine(gRenderer, 0, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT / 2);
 
-				//Draw vertical line of yellow dots
-				SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0x00, 0xFF);
-				for (int i = 0; i < SCREEN_HEIGHT; i += 4)
-				{
-					SDL_RenderDrawPoint(gRenderer, SCREEN_WIDTH / 2, i);
-				}
+				//Draw midscreen vertical line
+				SDL_SetRenderDrawColor(gRenderer, 0, 0, 255, 255);
+				SDL_RenderDrawLine(gRenderer, SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2, SCREEN_HEIGHT);
 
 				//Update screen
 				SDL_RenderPresent(gRenderer);
@@ -244,7 +303,7 @@ int main(int argc, char* args[])
 
 
 // Stuff that might be usefull later
-/*SDL_Texture* loadTexture(std::string path)
+/* SDL_Texture* loadTexture(std::string path)
 {
 	//The final texture
 	SDL_Texture* newTexture = NULL;
