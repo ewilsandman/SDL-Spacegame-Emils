@@ -24,14 +24,14 @@ int ShotLenght = 10;
 
 //Enemy settings
 int MaxWaves = 2;
-int EnemiesPerWave = 3;
-float TimeBetweenWaves;
-int EnemySize;
-
-
+int CurrentWave = 0;
+int EnemySpeed = 2;
+int EnemiesPerWave = 8;
+bool WaveActive = false;
+float TimeBetweenWaves; // might not use
+int EnemySize = 8;
 
 //Store key state (unused)
-
 enum KeyPress
 {
 	KEY_PRESS_DEFAULT,
@@ -47,12 +47,7 @@ bool init();
 //Loads media
 bool loadMedia();
 
-//Handles Enemies;
-void handleEnemy(int);
-///Ideas for handling enemies
-/// Bool[], flip bool to false when hit, use relative distance between enemies, move in sync
-/// Enemy[], similar to first but now enemies can be diffrent, operate independently
-///
+void spawnWave();
 void playerShoot();
 
 //shuts down SDL
@@ -66,6 +61,37 @@ SDL_Window* gWindow = NULL;
 
 //The window renderer
 SDL_Renderer* gRenderer = NULL;
+
+class Enemy // this can almost certainly be done better
+{
+	int EnemyX = 0;
+	int EnemyY = 0;
+	int EnemySize = 20;
+    bool Alive = false;
+	public:
+	void SetPos(int x, int y)
+	{
+		EnemyX = x;
+		EnemyY = y;
+	}
+	int GetX()
+	{
+		return EnemyX;
+	}
+	int GetY()
+	{
+		return EnemyY;
+	}
+	void SetLife(bool input)
+	{
+		Alive = input;
+	}
+	bool GetLife()
+	{
+		return Alive;
+	}
+};
+Enemy Enemies[10];
 
 bool init()
 {
@@ -87,7 +113,7 @@ bool init()
 		}
 
 		//Create window
-		gWindow = SDL_CreateWindow("SDL Spacegame thing", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+		gWindow = SDL_CreateWindow("Bootleg invaders", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 		if (gWindow == NULL)
 		{
 			printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
@@ -130,18 +156,34 @@ bool loadMedia()
 	return success;
 }
 
-void handleEnemy(int)
+void spawnWave()
 {
+	if (WaveActive)
+	{
 
+	}
+	else
+	{
+		for (int i = 1; i < EnemiesPerWave + 1; i++)
+		{
+			Enemies[i - 1].SetLife(true);
+			Enemies[i - 1].SetPos(i * EnemySize * 2, 0);
+			char buffer[50];
+			sprintf_s(buffer, "Adding Enemy at %d", Enemies[i].GetX());
+			SDL_LogInfo(0, buffer);
+		}
+		if (CurrentWave < MaxWaves)
+		{
+			WaveActive = true;
+		}
+		CurrentWave = CurrentWave + 1;
+	}
 }
-
 void playerShoot()
 {
 	char ShotBuffer[50];
 	if (ShotActive) // preventing player from shooting more than one shot
-	{
-
-	}
+	{}
 	else
 	{
 		ShotX = PlayerX + PlayerSize / 2;
@@ -212,11 +254,7 @@ int main(int argc, char* args[])
 							break;
 							
 						case SDLK_DOWN:
-							if (PlayerY + PlayerSize + 2 > SCREEN_WIDTH)
-							{
-								break;
-							}
-							PlayerY = PlayerY + 2;
+							spawnWave();
 							break;
 
 						case SDLK_LEFT:
@@ -276,6 +314,16 @@ int main(int argc, char* args[])
 				//Draw midscreen vertical line
 				SDL_SetRenderDrawColor(gRenderer, 0, 0, 255, 255);
 				SDL_RenderDrawLine(gRenderer, SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2, SCREEN_HEIGHT);
+				//something to handle collisions/hits
+
+				//Draw enemies
+				for (int currentEnemy = 0; currentEnemy < EnemiesPerWave; currentEnemy++)
+				{
+					//handleEnemy(Enemies[currentEnemy]);
+					SDL_Rect fillRect = { Enemies[currentEnemy].GetX(),  Enemies[currentEnemy].GetY(),  EnemySize,  EnemySize };
+					SDL_SetRenderDrawColor(gRenderer, 100, 100, 255, 255);
+					SDL_RenderFillRect(gRenderer, &fillRect);
+				}
 
 				//Update screen
 				SDL_RenderPresent(gRenderer);
