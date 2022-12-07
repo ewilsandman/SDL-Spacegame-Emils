@@ -26,10 +26,10 @@ int ShotLenght = 10;
 int MaxWaves = 2;
 int CurrentWave = 0;
 int EnemySpeed = 2;
-int EnemiesPerWave = 8;
+int EnemiesPerWave = 2;
 bool WaveActive = false;
 float TimeBetweenWaves; // might not use
-int EnemySize = 8;
+int EnemySize = 20;
 
 //Store key state (unused)
 enum KeyPress
@@ -66,7 +66,7 @@ class Enemy // this can almost certainly be done better
 {
 	int EnemyX = 0;
 	int EnemyY = 0;
-	int EnemySize = 20;
+	int EnemySize = 50;
     bool Alive = false;
 	public:
 	void SetPos(int x, int y)
@@ -164,18 +164,23 @@ void spawnWave()
 	}
 	else
 	{
-		for (int i = 1; i < EnemiesPerWave + 1; i++)
-		{
-			Enemies[i - 1].SetLife(true);
-			Enemies[i - 1].SetPos(i * EnemySize * 2, 0);
-			char buffer[50];
-			sprintf_s(buffer, "Adding Enemy at %d", Enemies[i].GetX());
-			SDL_LogInfo(0, buffer);
-		}
+		char buffer[50];
 		if (CurrentWave < MaxWaves)
 		{
-			WaveActive = true;
+			for (int i = 1; i < EnemiesPerWave + 1; i++)
+			{
+				Enemies[i - 1].SetLife(true);
+				Enemies[i - 1].SetPos(i * EnemySize * 2, 0);
+				sprintf_s(buffer, "Adding Enemy at %d", Enemies[i].GetX());
+				SDL_LogInfo(0, buffer);
+			}
 		}
+		else
+		{
+			sprintf_s(buffer, "You win!");
+			SDL_LogInfo(0, buffer);
+		}
+		WaveActive = true;
 		CurrentWave = CurrentWave + 1;
 	}
 }
@@ -314,15 +319,40 @@ int main(int argc, char* args[])
 				//Draw midscreen vertical line
 				SDL_SetRenderDrawColor(gRenderer, 0, 0, 255, 255);
 				SDL_RenderDrawLine(gRenderer, SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2, SCREEN_HEIGHT);
-				//something to handle collisions/hits
-
-				//Draw enemies
+				bool WaveHasEnemies = false;
+				//Draw enemies and handle collisions/hits
 				for (int currentEnemy = 0; currentEnemy < EnemiesPerWave; currentEnemy++)
 				{
-					//handleEnemy(Enemies[currentEnemy]);
-					SDL_Rect fillRect = { Enemies[currentEnemy].GetX(),  Enemies[currentEnemy].GetY(),  EnemySize,  EnemySize };
-					SDL_SetRenderDrawColor(gRenderer, 100, 100, 255, 255);
-					SDL_RenderFillRect(gRenderer, &fillRect);
+					if (Enemies[currentEnemy].GetLife() == true)
+					{
+						SDL_Rect fillRect = { Enemies[currentEnemy].GetX(),  Enemies[currentEnemy].GetY(),  EnemySize,  EnemySize };
+						SDL_SetRenderDrawColor(gRenderer, 100, 100, 255, 255);
+						SDL_RenderFillRect(gRenderer, &fillRect);
+						WaveHasEnemies = true;
+					}
+					int CurrentEnemyX = Enemies[currentEnemy].GetX();
+					int CurrentEnemyY = Enemies[currentEnemy].GetY();
+					if (ShotActive)
+					{
+						if (CurrentEnemyX < ShotX && ShotX < (CurrentEnemyX + EnemySize))
+						{
+							sprintf_s(buffer, "X in range!");
+							SDL_LogInfo(0, buffer);
+							if (CurrentEnemyY < ShotY && ShotY < (CurrentEnemyY + EnemySize))
+							{
+								sprintf_s(buffer, "Y in range!");
+								Enemies[currentEnemy].SetLife(false);
+								SDL_LogInfo(0, buffer);
+							}
+						}
+					}
+					//sprintf_s(buffer, "No hit detected %d , %d , %d , %d", ShotX, CurrentEnemyX, CurrentEnemyX + EnemySize, Enemies[currentEnemy].GetY());
+				}
+				if (WaveHasEnemies)
+				{ }
+				else
+				{
+					WaveActive = false;
 				}
 
 				//Update screen
@@ -334,13 +364,12 @@ int main(int argc, char* args[])
 				// Cap to 60 FPS
 				SDL_Delay(floor(16.666f - elapsedMS));
 			}
+			//Free resources and close SDL
+			close();
+
+			return 0;
 		}
 	}
-
-	//Free resources and close SDL
-	close();
-
-	return 0;
 }
 
 
