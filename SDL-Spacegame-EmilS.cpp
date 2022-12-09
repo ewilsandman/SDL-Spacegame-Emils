@@ -4,12 +4,12 @@
 #include <stdio.h>
 #include <string>
 #include <cmath>
+#include <cstdlib>
+#include <time.h>
 
 //Screen dimension constants
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 800;
-
-//Start pos const
 
 //player pos values
 int PlayerSize = 50;
@@ -22,11 +22,10 @@ int ShotX = 0;
 int ShotY = SCREEN_HEIGHT - PlayerSize * 2;
 int ShotLenght = 10;
 
-//Enemy settings
+//Wave settings
 int MaxWaves = 2;
 int CurrentWave = 0;
-int EnemySpeed = 2;
-int EnemiesPerWave = 2;
+int EnemiesPerWave = 8;
 bool WaveActive = false;
 float TimeBetweenWaves; // might not use
 int EnemySize = 20;
@@ -62,13 +61,30 @@ SDL_Window* gWindow = NULL;
 //The window renderer
 SDL_Renderer* gRenderer = NULL;
 
-class Enemy // this can almost certainly be done better
+class Enemy
 {
-	int EnemyX = 0;
-	int EnemyY = 0;
-	int EnemySize = 50;
-    bool Alive = false;
-	public:
+	private:
+	int EnemyX;
+	int EnemyY;
+	int EnemySize;
+	int Speed;
+	bool Alive;
+	int Movedelay; // in frames
+	int FramesSinceMoved;
+	public: 
+	Enemy() // likely redundant
+	{
+		char Buffer[50];
+		EnemyX = 0;
+		EnemyY = 0;
+		EnemySize = 50;
+		Speed = 1;
+		Alive = false;
+		Movedelay = 6; // in frames, difficulty here??
+		FramesSinceMoved = 0;
+		sprintf_s(Buffer, "Helo ");
+		SDL_LogInfo(0, Buffer);
+	}
 	void SetPos(int x, int y)
 	{
 		EnemyX = x;
@@ -90,7 +106,21 @@ class Enemy // this can almost certainly be done better
 	{
 		return Alive;
 	}
+	void CheckAndPreformMove()
+	{
+		if (FramesSinceMoved >= Movedelay)
+		{
+			char Buffer[50];
+			EnemyY= EnemyY + Speed;
+			FramesSinceMoved = 0;
+		}
+		else
+		{
+			FramesSinceMoved++;
+		}
+	}
 };
+
 Enemy Enemies[10];
 
 bool init()
@@ -156,34 +186,6 @@ bool loadMedia()
 	return success;
 }
 
-void spawnWave()
-{
-	if (WaveActive)
-	{
-
-	}
-	else
-	{
-		char buffer[50];
-		if (CurrentWave < MaxWaves)
-		{
-			for (int i = 1; i < EnemiesPerWave + 1; i++)
-			{
-				Enemies[i - 1].SetLife(true);
-				Enemies[i - 1].SetPos(i * EnemySize * 2, 0);
-				sprintf_s(buffer, "Adding Enemy at %d", Enemies[i].GetX());
-				SDL_LogInfo(0, buffer);
-			}
-		}
-		else
-		{
-			sprintf_s(buffer, "You win!");
-			SDL_LogInfo(0, buffer);
-		}
-		WaveActive = true;
-		CurrentWave = CurrentWave + 1;
-	}
-}
 void playerShoot()
 {
 	char ShotBuffer[50];
@@ -229,12 +231,11 @@ int main(int argc, char* args[])
 		}
 		else
 		{
-			//Main loop flag
+			srand(time(0));
+			
 			bool quit = false;
-
-			//Event handler
+			
 			SDL_Event e;
-
 			//While application is running
 			while (!quit)
 			{
@@ -244,7 +245,7 @@ int main(int argc, char* args[])
 				while (SDL_PollEvent(&e) != 0)
 				{
 					//User requests quit
-					if (e.type == SDL_QUIT)
+					if (e.type == SDL_QUIT) // does not seem to work?
 					{
 						quit = true;
 					}
@@ -311,42 +312,40 @@ int main(int argc, char* args[])
 					SDL_Rect shotRect = { ShotX, ShotY, ShotLenght / 2, ShotLenght};
 					SDL_RenderFillRect(gRenderer, &shotRect);
 				}
-
-				//Draw midscreen horisontal line
-				SDL_SetRenderDrawColor(gRenderer, 0, 0, 255, 255);
-				SDL_RenderDrawLine(gRenderer, 0, SCREEN_HEIGHT / 2, SCREEN_WIDTH, SCREEN_HEIGHT / 2);
-
-				//Draw midscreen vertical line
-				SDL_SetRenderDrawColor(gRenderer, 0, 0, 255, 255);
-				SDL_RenderDrawLine(gRenderer, SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2, SCREEN_HEIGHT);
 				bool WaveHasEnemies = false;
+
 				//Draw enemies and handle collisions/hits
-				for (int currentEnemy = 0; currentEnemy < EnemiesPerWave; currentEnemy++)
+				for (int i = 0; i < EnemiesPerWave; i++)
 				{
-					if (Enemies[currentEnemy].GetLife() == true)
+					int CurrentEnemyX = Enemies[i].GetX();
+					int CurrentEnemyY = Enemies[i].GetY();
+					if (Enemies[i].GetLife() == true)
 					{
-						SDL_Rect fillRect = { Enemies[currentEnemy].GetX(),  Enemies[currentEnemy].GetY(),  EnemySize,  EnemySize };
+						SDL_Rect fillRect = { CurrentEnemyX,  CurrentEnemyY,  EnemySize,  EnemySize };
 						SDL_SetRenderDrawColor(gRenderer, 100, 100, 255, 255);
 						SDL_RenderFillRect(gRenderer, &fillRect);
+						Enemies[i].CheckAndPreformMove();
 						WaveHasEnemies = true;
 					}
-					int CurrentEnemyX = Enemies[currentEnemy].GetX();
-					int CurrentEnemyY = Enemies[currentEnemy].GetY();
 					if (ShotActive)
 					{
-						if (CurrentEnemyX < ShotX && ShotX < (CurrentEnemyX + EnemySize))
+						if (CurrentEnemyX - ShotLenght /3 < ShotX && ShotX < (CurrentEnemyX + EnemySize))
 						{
 							sprintf_s(buffer, "X in range!");
 							SDL_LogInfo(0, buffer);
 							if (CurrentEnemyY < ShotY && ShotY < (CurrentEnemyY + EnemySize))
 							{
 								sprintf_s(buffer, "Y in range!");
-								Enemies[currentEnemy].SetLife(false);
+								Enemies[i].SetLife(false);
+								ShotActive = false;
 								SDL_LogInfo(0, buffer);
 							}
 						}
 					}
-					//sprintf_s(buffer, "No hit detected %d , %d , %d , %d", ShotX, CurrentEnemyX, CurrentEnemyX + EnemySize, Enemies[currentEnemy].GetY());
+					if(CurrentEnemyY == SCREEN_HEIGHT - PlayerSize)
+					{
+						quit = true;
+					}
 				}
 				if (WaveHasEnemies)
 				{ }
@@ -370,47 +369,35 @@ int main(int argc, char* args[])
 			return 0;
 		}
 	}
+	return 0;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Stuff that might be usefull later
-/* SDL_Texture* loadTexture(std::string path)
+void spawnWave()
 {
-	//The final texture
-	SDL_Texture* newTexture = NULL;
-
-	//Load image at specified path
-	SDL_Surface* loadedSurface = IMG_Load(path.c_str());
-	/
-	if (loadedSurface == NULL)
+	if (WaveActive)
 	{
-		printf("Unable to load image %s! SDL_image Error: %s\n", path.c_str(), IMG_GetError());
+
 	}
 	else
 	{
-		//Create texture from surface pixels
-		newTexture = SDL_CreateTextureFromSurface(gRenderer, loadedSurface);
-		if (newTexture == NULL)
+		char buffer[50];
+		if (CurrentWave < MaxWaves)
 		{
-			printf("Unable to create texture from %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
+			for (int i = 1; i < EnemiesPerWave + 1; i++)
+			{
+				Enemies[i - 1].SetLife(true);
+				int randomness = log10(rand()) * 10;
+				Enemies[i - 1].SetPos(i * EnemySize * 2 + randomness, 0);
+				sprintf_s(buffer, "Adding Enemy at %d", Enemies[i].GetX());
+				SDL_LogInfo(0, buffer);
+			}
 		}
-
-		//Get rid of old loaded surface
-		SDL_FreeSurface(loadedSurface);
+		else
+		{
+			sprintf_s(buffer, "You win!");
+			SDL_LogInfo(0, buffer);
+		}
+		WaveActive = true;
+		CurrentWave = CurrentWave + 1;
 	}
-
-	return newTexture;
-}*/
+}
