@@ -73,7 +73,6 @@ class Enemy
 	public: 
 	Enemy() // likely redundant
 	{
-		char Buffer[50];
 		EnemyX = 0;
 		EnemyY = 0;
 		EnemySize = 50;
@@ -81,8 +80,11 @@ class Enemy
 		Alive = false;
 		Movedelay = 6; // in frames, difficulty here??
 		FramesSinceMoved = 0;
+#if DEBUG
+		char Buffer[50];
 		sprintf_s(Buffer, "Helo ");
 		SDL_LogInfo(0, Buffer);
+#endif
 	}
 	void SetPos(int x, int y)
 	{
@@ -109,7 +111,6 @@ class Enemy
 	{
 		if (FramesSinceMoved >= Movedelay)
 		{
-			char Buffer[50];
 			EnemyY= EnemyY + Speed;
 			FramesSinceMoved = 0;
 		}
@@ -178,15 +179,17 @@ bool loadMedia()
 
 void playerShoot()
 {
-	char ShotBuffer[50];
 	if (ShotActive) // preventing player from shooting more than one shot
 	{}
 	else
 	{
 		ShotX = PlayerX + PlayerSize / 2;
 		ShotY = SCREEN_HEIGHT - PlayerSize;
+#if DEBUG
+		char ShotBuffer[50];
 		sprintf_s(ShotBuffer, "Firing shot %d", ShotY);
 		SDL_LogInfo(0, ShotBuffer);
+#endif
 		ShotActive = true;
 	}
 }
@@ -289,13 +292,17 @@ int main(int argc, char* args[])
 					if (ShotY < 0)
 					{
 						ShotActive = false;
+# if debug
 						sprintf_s(buffer, "Disabling shot %d", ShotY);
 						SDL_LogInfo(0, buffer);
+#endif
 					}
 					else
 					{
+# if debug
 						sprintf_s(buffer, "Shot traversing %d", ShotY);
 						SDL_LogInfo(0, buffer);
+#endif
 					}
 					SDL_SetRenderDrawColor(gRenderer, 100, 255, 255, 255);
 					SDL_Rect shotRect = { ShotX, ShotY, ShotLenght / 2, ShotLenght};
@@ -320,14 +327,18 @@ int main(int argc, char* args[])
 					{
 						if (CurrentEnemyX - ShotLenght /3 < ShotX && ShotX < (CurrentEnemyX + EnemySize))
 						{
+#if debug
 							sprintf_s(buffer, "X in range!");
 							SDL_LogInfo(0, buffer);
+#endif
 							if (CurrentEnemyY < ShotY && ShotY < (CurrentEnemyY + EnemySize))
 							{
-								sprintf_s(buffer, "Y in range!");
 								Enemies[i].SetLife(false);
 								ShotActive = false;
+#if debug
+								sprintf_s(buffer, "Y in range!");
 								SDL_LogInfo(0, buffer);
+#endif
 							}
 						}
 					}
@@ -377,8 +388,10 @@ void spawnWave()
 				Enemies[i - 1].SetLife(true);
 				int randomness = log10(rand()) * 10;
 				Enemies[i - 1].SetPos(i * EnemySize * 2 + randomness, 0);
+#if debug
 				sprintf_s(buffer, "Adding Enemy at %d", Enemies[i].GetX());
 				SDL_LogInfo(0, buffer);
+#endif
 			}
 		}
 		else
