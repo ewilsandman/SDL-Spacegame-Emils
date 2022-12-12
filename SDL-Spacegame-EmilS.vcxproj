@@ -151,6 +151,9 @@
   <ItemGroup>
     <ClCompile Include="SDL-Spacegame-EmilS.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\OCR\SDL2-2.26.0\include\SDL.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -1,7 +1,6 @@
 //Using SDL, SDL_image, standard IO, math, and strings
 #include <SDL.h>
-#include <SDL_image.h>
-#include <stdio.h>
+//#include <stdio.h>
 #include <string>
 #include <cmath>
 #include <cstdlib>
@@ -127,7 +126,6 @@ bool init()
 {
 	//Initialization flag
 	bool success = true;
-	auto test = SDL_IMAGE_COMPILEDVERSION;
 	//Initialize SDL
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
@@ -162,14 +160,6 @@ bool init()
 			{
 				//Initialize renderer color	
 				SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-
-				//Initialize PNG loading (currently unused)
-				int imgFlags = IMG_INIT_PNG;
-				if (!(IMG_Init(imgFlags) & imgFlags))
-				{
-					printf("SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
-					success = false;
-				}
 			}
 		}
 	}
@@ -210,7 +200,6 @@ void close()
 	gRenderer = NULL;
 
 	//Quit SDL subsystems
-	IMG_Quit();
 	SDL_Quit();
 }
 
