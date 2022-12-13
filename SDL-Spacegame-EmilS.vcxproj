@@ -227,7 +227,11 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ECS.cpp" />
     <ClCompile Include="SDL-Spacegame-EmilS.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ECS.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

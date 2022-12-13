@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <time.h> // used for random generation
+#include "ECS.h"
 
 //Screen dimension constants
 const int SCREEN_WIDTH = 800;
@@ -46,6 +47,9 @@ SDL_Window* gWindow = NULL;
 //The window renderer
 SDL_Renderer* gRenderer = NULL;
 
+//Does ECS magic
+Coordinator gCoordinator;
+
 SDL_Rect PositionsToDraw[12];
 SDL_Color ColoursToDraw[12];
 int CurrentRenderObject = 0;
@@ -82,7 +86,7 @@ struct Enemy
 	}
 };
 
-Enemy Enemies[10];
+//Enemy Enemies[10];
 
 bool init()
 {
@@ -168,6 +172,20 @@ int main(int argc, char* args[])
 	}
 	else
 	{
+		gCoordinator.Init();
+
+		gCoordinator.RegisterComponent<SpeedComponent>();
+		gCoordinator.RegisterComponent<PositionComponent>();
+
+
+		auto movementSystem = gCoordinator.RegisterSystem<MovementSystem>();
+
+		Signature signature;
+		signature.set(gCoordinator.GetComponentType<SpeedComponent>());
+		signature.set(gCoordinator.GetComponentType<PositionComponent>());
+
+		gCoordinator.SetSystemSignature<MovementSystem>(signature);
+
 			srand(time(0));
 			bool quit = false;
 			SDL_Event e;
@@ -254,50 +272,8 @@ int main(int argc, char* args[])
 					SDL_RenderFillRect(gRenderer, &shotRect);
 				}
 				bool WaveHasEnemies = false;
+				// from this point using ECS
 
-				//Draw enemies and handle collisions/hits
-				for (int i = 0; i < EnemiesPerWave; i++)
-				{
-					int CurrentEnemyX = Enemies[i].GetX();
-					int CurrentEnemyY = Enemies[i].GetY();
-					if (Enemies[i].GetLife() == true)
-					{
-						SDL_Rect fillRect = { CurrentEnemyX,  CurrentEnemyY,  EnemySize,  EnemySize };
-						SDL_SetRenderDrawColor(gRenderer, 100, 100, 255, 255);
-						SDL_RenderFillRect(gRenderer, &fillRect);
-						Enemies[i].CheckAndPreformMove();
-						WaveHasEnemies = true;
-					}
-					if (ShotActive)
-					{
-						if (CurrentEnemyX - ShotLenght /3 < ShotX && ShotX < (CurrentEnemyX + EnemySize))
-						{
-#if debug
-							sprintf_s(buffer, "X in range!");
-							SDL_LogInfo(0, buffer);
-#endif
-							if (CurrentEnemyY < ShotY && ShotY < (CurrentEnemyY + EnemySize))
-							{
-								Enemies[i].SetLife(false);
-								ShotActive = false;
-#if debug
-								sprintf_s(buffer, "Y in range!");
-								SDL_LogInfo(0, buffer);
-#endif
-							}
-						}
-					}
-					if(CurrentEnemyY == SCREEN_HEIGHT - PlayerSize)
-					{
-						quit = true;
-					}
-				}
-				if (WaveHasEnemies)
-				{ }
-				else
-				{
-					WaveActive = false;
-				}
 
 				//Update screen
 				SDL_RenderPresent(gRenderer);
@@ -329,9 +305,6 @@ void spawnWave()
 		{
 			for (int i = 1; i < EnemiesPerWave + 1; i++)
 			{
-				Enemies[i - 1].SetLife(true);
-				int randomness = log10(rand()) * 10;
-				Enemies[i - 1].SetPos(i * EnemySize * 2 + randomness, 0);
 #if debug
 				sprintf_s(buffer, "Adding Enemy at %d", Enemies[i].GetX());
 				SDL_LogInfo(0, buffer);
@@ -345,5 +318,18 @@ void spawnWave()
 		}
 		WaveActive = true;
 		CurrentWave = CurrentWave + 1;
+	}
+}
+
+void MovementSystem::Update()
+{
+	for (auto const& entity : mEntities)
+	{
+		auto& position = gCoordinator.GetComponent<PositionComponent>(entity);
+		auto const& speed = gCoordinator.GetComponent<SpeedComponent>(entity);
+
+		//transform.position += rigidBody.velocity * dt;
+
+		position.y += speed.speed;
 	}
 }
