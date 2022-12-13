@@ -1,10 +1,9 @@
 //Using SDL, SDL_image, standard IO, math, and strings
 #include <SDL.h>
-//#include <stdio.h>
 #include <string>
 #include <cmath>
 #include <cstdlib>
-#include <time.h>
+#include <time.h> // used for random generation
 
 //Screen dimension constants
 const int SCREEN_WIDTH = 800;
@@ -15,7 +14,7 @@ int PlayerSize = 50;
 int PlayerX = SCREEN_WIDTH /2 - PlayerSize /2;
 int PlayerY = SCREEN_HEIGHT - PlayerSize;
 
-//player shot values
+//shot values
 bool ShotActive = false;
 int ShotX = 0;
 int ShotY = SCREEN_HEIGHT - PlayerSize * 2;
@@ -29,21 +28,8 @@ bool WaveActive = false;
 float TimeBetweenWaves; // might not use
 int EnemySize = 20;
 
-//Store key state (unused)
-enum KeyPress
-{
-	KEY_PRESS_DEFAULT,
-	KEY_PRESS_UP,
-	KEY_PRESS_DOWN,
-	KEY_PRESS_LEFT,
-	KEY_PRESS_RIGHT,
-};
-
 //Starts up SDL and creates window
 bool init();
-
-//Loads media
-bool loadMedia();
 
 void spawnWave();
 void playerShoot();
@@ -60,52 +46,27 @@ SDL_Window* gWindow = NULL;
 //The window renderer
 SDL_Renderer* gRenderer = NULL;
 
-class Enemy
+SDL_Rect PositionsToDraw[12];
+SDL_Color ColoursToDraw[12];
+int CurrentRenderObject = 0;
+
+struct Enemy
 {
 	private:
-	int EnemyX;
-	int EnemyY;
-	int EnemySize;
-	int Speed;
-	bool Alive;
-	int Movedelay; // in frames
-	int FramesSinceMoved;
-	public: 
+	int EnemyX = 0;
+	int EnemyY = 0;
+	int EnemySize = 50;
+	int Speed = 1;
+	bool Alive = false;
+	int Movedelay = 6; // in frames
+	int FramesSinceMoved = 0;
 	Enemy() // likely redundant
 	{
-		EnemyX = 0;
-		EnemyY = 0;
-		EnemySize = 50;
-		Speed = 1;
-		Alive = false;
-		Movedelay = 6; // in frames, difficulty here??
-		FramesSinceMoved = 0;
 #if DEBUG
 		char Buffer[50];
 		sprintf_s(Buffer, "Helo ");
 		SDL_LogInfo(0, Buffer);
 #endif
-	}
-	void SetPos(int x, int y)
-	{
-		EnemyX = x;
-		EnemyY = y;
-	}
-	int GetX()
-	{
-		return EnemyX;
-	}
-	int GetY()
-	{
-		return EnemyY;
-	}
-	void SetLife(bool input)
-	{
-		Alive = input;
-	}
-	bool GetLife()
-	{
-		return Alive;
 	}
 	void CheckAndPreformMove()
 	{
@@ -168,15 +129,6 @@ bool init()
 	return success;
 }
 
-bool loadMedia()
-{
-	//Loading success flag
-	bool success = true;
-
-	//Nothing to load
-	return success;
-}
-
 void playerShoot()
 {
 	if (ShotActive) // preventing player from shooting more than one shot
@@ -216,17 +168,8 @@ int main(int argc, char* args[])
 	}
 	else
 	{
-		//Load media (unused)
-		if (!loadMedia())
-		{
-			printf("Failed to load media!\n");
-		}
-		else
-		{
 			srand(time(0));
-			
 			bool quit = false;
-			
 			SDL_Event e;
 			//While application is running
 			while (!quit)
@@ -278,12 +221,14 @@ int main(int argc, char* args[])
 				}
 				//Clear screen
 				SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, 0);
-				SDL_RenderClear(gRenderer);
+				SDL_RenderClear(gRenderer); 
+				CurrentRenderObject = 0;
 
 				//Draw player
-				SDL_Rect fillRect = { PlayerX, PlayerY,  PlayerSize,  PlayerSize   };
+				PositionsToDraw[0] = {PlayerX, PlayerY,  PlayerSize,  PlayerSize};
+				//ColoursToDraw[0] = { 255, 0, 0, 255 };
 				SDL_SetRenderDrawColor(gRenderer, 255, 0, 0, 255);
-				SDL_RenderFillRect(gRenderer, &fillRect);
+				SDL_RenderFillRect(gRenderer, &PositionsToDraw[0]);
 
 				//shot go up
 				if (ShotActive)
@@ -367,7 +312,6 @@ int main(int argc, char* args[])
 			close();
 
 			return 0;
-		}
 	}
 	return 0;
 }
