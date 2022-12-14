@@ -27,6 +27,8 @@ int CurrentWave = 0;
 const int EnemiesPerWave = 8;
 bool WaveActive = false;
 float TimeBetweenWaves; // might not use
+int Movedelay = 6; // in frames
+int FramesSinceMoved = 0;
 int EnemySize = 20;
 
 //Starts up SDL and creates window
@@ -53,6 +55,7 @@ Coordinator gCoordinator;
 SDL_Rect EnemyPositions[EnemiesPerWave];
 SDL_Color ColoursToDraw[12];
 int CurrentRenderObject = 0;
+bool AliveArray[EnemiesPerWave];
 
 std::vector<Entity> Enemies(EnemiesPerWave);
 
@@ -65,8 +68,6 @@ struct Enemy
 	int EnemySize = 50;
 	int Speed = 1;
 	bool Alive = false;
-	int Movedelay = 6; // in frames
-	int FramesSinceMoved = 0;
 	Enemy() // likely redundant
 	{
 #if 0
@@ -75,7 +76,7 @@ struct Enemy
 		SDL_LogInfo(0, Buffer);
 #endif
 	}
-	void CheckAndPreformMove()
+	/*void CheckAndPreformMove()
 	{
 		if (FramesSinceMoved >= Movedelay)
 		{
@@ -86,7 +87,7 @@ struct Enemy
 		{
 			FramesSinceMoved++;
 		}
-	}
+	}*/
 };
 
 //Enemy Enemies[10];
@@ -281,13 +282,51 @@ int main(int argc, char* args[])
 				}
 				bool WaveHasEnemies = false;
 				// from this point using ECS
-				movementSystem->Update();
+				if (WaveActive)
+				{
+					if (FramesSinceMoved > Movedelay)
+					{
+						movementSystem->Update();
+						FramesSinceMoved = 0;
+					}
+					else
+					{
+						FramesSinceMoved++;
+					}
+				}
 				SDL_SetRenderDrawColor(gRenderer, 100, 255, 255, 255);
 				for (int i = 0; i < EnemiesPerWave; i++)
 				{
-					sprintf_s(buffer, "Rendering Enemy %d ", EnemyPositions[i].x );
-					//SDL_LogInfo(0, buffer);
-					SDL_RenderFillRect(gRenderer, &EnemyPositions[i]);
+					auto currentEnemy = EnemyPositions[i];
+					if (currentEnemy.y > SCREEN_HEIGHT - PlayerSize)
+					{
+						quit = true;
+					}
+					if (currentEnemy.x < ShotX && ShotX < (currentEnemy.x + EnemySize))
+					{
+						if (currentEnemy.y < ShotY && ShotY < (currentEnemy.y + EnemySize))
+						{
+							AliveArray[i] = false;
+						}
+					}
+					/*if (currentEnemy.x == 0 && currentEnemy.y == 0)
+					{
+						AliveArray[i] = false;
+					}*/
+				}
+				for (int i = 0; i < EnemiesPerWave; i++)
+				{
+					if (AliveArray[i])
+					{
+						sprintf_s(buffer, "Rendering Enemy %d ", EnemyPositions[i].x);
+						//SDL_LogInfo(0, buffer);
+						SDL_RenderFillRect(gRenderer, &EnemyPositions[i]);
+						WaveHasEnemies = true;
+					}
+				}
+				if (!WaveHasEnemies) // breaking my normal pattern here
+				{
+					WaveActive = false;
 				}
 
 				//Update screen
@@ -322,7 +361,7 @@ void spawnWave()
 
 				for (auto& entity : Enemies)
 				{
-					int xPosition = EnemyCount * EnemySize * 2;
+					int xPosition = PlayerSize / 2 + EnemyCount * EnemySize * 3;
 					SDL_LogInfo(0, "creating enemy, EnemyCount %d position %d",  EnemyCount, xPosition);
 					entity = gCoordinator.CreateEntity();
 
@@ -337,8 +376,10 @@ void spawnWave()
 					gCoordinator.AddComponent(
 						entity,
 						LifeComponent{ true });
+					AliveArray[EnemyCount] = true;
 					EnemyCount++;
 				}
+				WaveActive;
 
 		}
 		else
