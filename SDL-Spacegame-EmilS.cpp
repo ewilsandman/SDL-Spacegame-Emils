@@ -24,7 +24,7 @@ int ShotLenght = 10;
 //Wave settings
 int MaxWaves = 2;
 int CurrentWave = 0;
-int EnemiesPerWave = 8;
+const int EnemiesPerWave = 8;
 bool WaveActive = false;
 float TimeBetweenWaves; // might not use
 int EnemySize = 20;
@@ -50,9 +50,12 @@ SDL_Renderer* gRenderer = NULL;
 //Does ECS magic
 Coordinator gCoordinator;
 
-SDL_Rect PositionsToDraw[12];
+SDL_Rect EnemyPositions[EnemiesPerWave];
 SDL_Color ColoursToDraw[12];
 int CurrentRenderObject = 0;
+
+std::vector<Entity> Enemies(EnemiesPerWave);
+
 
 struct Enemy
 {
@@ -66,7 +69,7 @@ struct Enemy
 	int FramesSinceMoved = 0;
 	Enemy() // likely redundant
 	{
-#if DEBUG
+#if 0
 		char Buffer[50];
 		sprintf_s(Buffer, "Helo ");
 		SDL_LogInfo(0, Buffer);
@@ -107,7 +110,7 @@ bool init()
 		}
 
 		//Create window
-		gWindow = SDL_CreateWindow("Bootleg invaders", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+		gWindow = SDL_CreateWindow("Bootleg invaders: Now using an ECS", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 		if (gWindow == NULL)
 		{
 			printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
@@ -141,7 +144,7 @@ void playerShoot()
 	{
 		ShotX = PlayerX + PlayerSize / 2;
 		ShotY = SCREEN_HEIGHT - PlayerSize;
-#if DEBUG
+#if 0
 		char ShotBuffer[50];
 		sprintf_s(ShotBuffer, "Firing shot %d", ShotY);
 		SDL_LogInfo(0, ShotBuffer);
@@ -176,17 +179,22 @@ int main(int argc, char* args[])
 
 		gCoordinator.RegisterComponent<SpeedComponent>();
 		gCoordinator.RegisterComponent<PositionComponent>();
+		gCoordinator.RegisterComponent<LifeComponent>();
 
 
 		auto movementSystem = gCoordinator.RegisterSystem<MovementSystem>();
+		auto renderSystem = gCoordinator.RegisterSystem<RenderSystem>();
 
 		Signature signature;
 		signature.set(gCoordinator.GetComponentType<SpeedComponent>());
 		signature.set(gCoordinator.GetComponentType<PositionComponent>());
+		signature.set(gCoordinator.GetComponentType<LifeComponent>());
 
 		gCoordinator.SetSystemSignature<MovementSystem>(signature);
 
-			srand(time(0));
+		//Enemies.reserve(8);
+
+			srand((unsigned int)time(0));
 			bool quit = false;
 			SDL_Event e;
 			//While application is running
@@ -243,10 +251,10 @@ int main(int argc, char* args[])
 				CurrentRenderObject = 0;
 
 				//Draw player
-				PositionsToDraw[0] = {PlayerX, PlayerY,  PlayerSize,  PlayerSize};
+				SDL_Rect PositionToDraw = {PlayerX, PlayerY,  PlayerSize,  PlayerSize};
 				//ColoursToDraw[0] = { 255, 0, 0, 255 };
 				SDL_SetRenderDrawColor(gRenderer, 255, 0, 0, 255);
-				SDL_RenderFillRect(gRenderer, &PositionsToDraw[0]);
+				SDL_RenderFillRect(gRenderer, &PositionToDraw);
 
 				//shot go up
 				if (ShotActive)
@@ -273,7 +281,14 @@ int main(int argc, char* args[])
 				}
 				bool WaveHasEnemies = false;
 				// from this point using ECS
-
+				movementSystem->Update();
+				SDL_SetRenderDrawColor(gRenderer, 100, 255, 255, 255);
+				for (int i = 0; i < EnemiesPerWave; i++)
+				{
+					sprintf_s(buffer, "Rendering Enemy %d ", EnemyPositions[i].x );
+					//SDL_LogInfo(0, buffer);
+					SDL_RenderFillRect(gRenderer, &EnemyPositions[i]);
+				}
 
 				//Update screen
 				SDL_RenderPresent(gRenderer);
@@ -300,16 +315,31 @@ void spawnWave()
 	}
 	else
 	{
+		int EnemyCount = 0;
 		char buffer[50];
 		if (CurrentWave < MaxWaves)
 		{
-			for (int i = 1; i < EnemiesPerWave + 1; i++)
-			{
-#if debug
-				sprintf_s(buffer, "Adding Enemy at %d", Enemies[i].GetX());
-				SDL_LogInfo(0, buffer);
-#endif
-			}
+
+				for (auto& entity : Enemies)
+				{
+					int xPosition = EnemyCount * EnemySize * 2;
+					SDL_LogInfo(0, "creating enemy, EnemyCount %d position %d",  EnemyCount, xPosition);
+					entity = gCoordinator.CreateEntity();
+
+					gCoordinator.AddComponent(
+						entity,
+						PositionComponent{ xPosition, 0 });
+
+					gCoordinator.AddComponent(
+						entity,
+						SpeedComponent{ 1 });
+
+					gCoordinator.AddComponent(
+						entity,
+						LifeComponent{ true });
+					EnemyCount++;
+				}
+
 		}
 		else
 		{
@@ -323,13 +353,21 @@ void spawnWave()
 
 void MovementSystem::Update()
 {
-	for (auto const& entity : mEntities)
+	int x = 0;
+	int y = 0;
+	int i = 0;
+	for (auto const& entity : Enemies)
 	{
 		auto& position = gCoordinator.GetComponent<PositionComponent>(entity);
-		auto const& speed = gCoordinator.GetComponent<SpeedComponent>(entity);
-
-		//transform.position += rigidBody.velocity * dt;
-
+		auto& speed = gCoordinator.GetComponent<SpeedComponent>(entity);
 		position.y += speed.speed;
+
+
+		EnemyPositions[i] = { x, y, EnemySize, EnemySize };
+		x = position.x;
+		y = position.y;
+		i++;
 	}
+	/*for (size_t i = 0; i <Enemies.size(); i++)
+	{}*/
 }

@@ -7,18 +7,19 @@
 #include <set>
 #include <shared_mutex>
 #include <assert.h>
+#include <memory>
 /// <summary>
-/// This ECS system is based on https://austinmorlan.com/posts/entity_component_system/
+/// This ECS system is largely based on https://austinmorlan.com/posts/entity_component_system/
 /// </summary>
-using Entity = std::uint16_t;
+using Entity = std::uint32_t;
 
-using ComponentType = std::uint8_t;
+using ComponentType = std::uint32_t;
 
-const Entity Entitylimit = 20;
+const Entity Entitylimit = 8;
 
-const ComponentType ComponentLimit = 2;
+const ComponentType ComponentLimit = 10;
 
-using Signature = std::bitset<ComponentLimit>;
+using Signature = std::bitset<ComponentLimit>;	
 struct PositionComponent
 {
 	int x;
@@ -37,6 +38,12 @@ struct Colour
 	int b;
 	int a;
 };
+
+struct LifeComponent
+{
+	bool alive;
+};
+
 class EntityManager
 {
 public:
@@ -51,18 +58,11 @@ public:
 
 	Entity CreateEntity()
 	{
-		if (livingEntityCount < Entitylimit)
-		{
-		}
-		else
-		{
 			// Take an ID from the front of the queue
 			Entity id = qOpenEntityIDs.front();
 			qOpenEntityIDs.pop();
 			++livingEntityCount;
-
 			return id;
-		}
 	}
 
 	void DestroyEntity(Entity entity)
@@ -86,7 +86,8 @@ public:
 		// Get this entity's signature from the array
 		return aSignatures[entity];
 	}
-
+	// Total living entities - used to keep limits on how many exist
+	uint32_t livingEntityCount{};
 private:
 	// Queue of unused entity IDs
 	std::queue<Entity> qOpenEntityIDs{};
@@ -94,8 +95,7 @@ private:
 	// Array of signatures where the index corresponds to the entity ID
 	std::array<Signature, Entitylimit> aSignatures{};
 
-	// Total living entities - used to keep limits on how many exist
-	uint32_t livingEntityCount{};
+	
 };
 
 
@@ -176,9 +176,14 @@ class System
 public:
 	std::set<Entity> mEntities;
 };
-class MovementSystem : System
+class MovementSystem : public System
 {
-
+public:
+	void Update();
+};
+class RenderSystem : public System
+{
+public:
 	void Update();
 };
 
@@ -189,10 +194,11 @@ public:
 	std::shared_ptr<T> RegisterSystem()
 	{
 		const char* typeName = typeid(T).name();
-
+		const std::type_info* type = &typeid(T);
 		// Create a pointer to the system and return it so it can be used externally
 		auto system = std::make_shared<T>();
-		mSystems.insert({ typeName, system });
+		mSystems[typeName] = system;
+		//mSystems.insert({ type, system });
 		return system;
 	}
 
@@ -310,7 +316,6 @@ public:
 			component->EntityDestroyed(entity);
 		}
 	}
-
 private:
 	// Map from type string pointer to a component type
 	std::unordered_map<const char*, ComponentType> mComponentTypes{};
