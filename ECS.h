@@ -22,13 +22,14 @@ const ComponentType ComponentLimit = 10;
 using Signature = std::bitset<ComponentLimit>;	
 struct PositionComponent
 {
-	int x;
-	int y;
+	int x = 0;
+	int y = 0;
+	bool alive = true;
 };
 
 struct SpeedComponent
 {
-	int speed;
+	int speed = 0;
 };
 
 struct Colour
@@ -41,7 +42,7 @@ struct Colour
 
 struct LifeComponent
 {
-	bool alive;
+	bool alive = false;
 };
 
 class EntityManager
@@ -53,6 +54,7 @@ public:
 		for (Entity entity = 0; entity < Entitylimit; ++entity)
 		{
 			qOpenEntityIDs.push(entity);
+			SDL_LogWarn(0,"Pushing %d", entity);
 		}
 	}
 
@@ -61,6 +63,7 @@ public:
 			// Take an ID from the front of the queue
 			Entity id = qOpenEntityIDs.front();
 			qOpenEntityIDs.pop();
+			SDL_LogWarn(0, "Popping %d", id);
 			++livingEntityCount;
 			return id;
 	}
@@ -68,10 +71,11 @@ public:
 	void DestroyEntity(Entity entity)
 	{
 		// Invalidate the destroyed entity's signature
-		aSignatures[entity].reset();
+		aSignatures[entity].reset(); // not working?
 
 		// Put the destroyed ID at the back of the queue
 		qOpenEntityIDs.push(entity);
+		SDL_LogWarn(0, "reseting and Pushing %d", entity);
 		--livingEntityCount;
 	}
 
@@ -119,6 +123,7 @@ public:
 		mIndexToEntityMap[newIndex] = entity;
 		aComponentArray[newIndex] = component;
 		++Size;
+		SDL_LogWarn(0, "InsertData Entity %d newIndex %d size %d", entity, newIndex, Size);
 	}
 
 	void RemoveData(Entity entity)
@@ -127,7 +132,7 @@ public:
 		size_t indexOfRemovedEntity = mEntityToIndexMap[entity];
 		size_t indexOfLastElement = Size - 1;
 		aComponentArray[indexOfRemovedEntity] = aComponentArray[indexOfLastElement];
-
+		SDL_LogWarn(0, "RemoveData Entity %d mIndexToEntityMap[indexOfRemovedEntity] %d A", entity, mIndexToEntityMap[indexOfRemovedEntity]);
 		// Update map to point to moved spot
 		Entity entityOfLastElement = mIndexToEntityMap[indexOfLastElement];
 		mEntityToIndexMap[entityOfLastElement] = indexOfRemovedEntity;
@@ -137,6 +142,8 @@ public:
 		mIndexToEntityMap.erase(indexOfLastElement);
 
 		--Size;
+		SDL_LogWarn(0, "RemoveData Entity %d mIndexToEntityMap[indexOfRemovedEntity] %d B ", entity, mIndexToEntityMap[indexOfRemovedEntity]);
+		SDL_LogWarn(0, "RemoveData Entity %d indexOfLastElement %d indexOfRemovedEntity %d size %d", entity, indexOfLastElement, indexOfRemovedEntity, Size);
 	}
 
 	T& GetData(Entity entity)
@@ -148,6 +155,7 @@ public:
 
 	void EntityDestroyed(Entity entity) override
 	{
+		SDL_LogWarn(0, "EntityDestroyed Entity %p ", entity);
 		if (mEntityToIndexMap.find(entity) != mEntityToIndexMap.end())
 		{
 			// Remove the entity's component if it existed
@@ -181,7 +189,7 @@ class MovementSystem : public System
 public:
 	void Update();
 };
-class RenderSystem : public System
+class CollisionSystem : public System
 {
 public:
 	void Update();

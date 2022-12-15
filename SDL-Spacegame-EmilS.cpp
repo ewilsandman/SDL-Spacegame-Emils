@@ -30,6 +30,7 @@ float TimeBetweenWaves; // might not use
 int Movedelay = 6; // in frames
 int FramesSinceMoved = 0;
 int EnemySize = 20;
+bool WaveHasEnemies = false;
 
 //Starts up SDL and creates window
 bool init();
@@ -54,12 +55,11 @@ Coordinator gCoordinator;
 
 SDL_Rect EnemyPositions[EnemiesPerWave];
 SDL_Color ColoursToDraw[12];
-int CurrentRenderObject = 0;
+//int CurrentRenderObject = 0;
 bool AliveArray[EnemiesPerWave];
 
 std::vector<Entity> Enemies(EnemiesPerWave);
-
-
+#if 0
 struct Enemy
 {
 	private:
@@ -91,7 +91,7 @@ struct Enemy
 };
 
 //Enemy Enemies[10];
-
+#endif
 bool init()
 {
 	//Initialization flag
@@ -111,7 +111,7 @@ bool init()
 		}
 
 		//Create window
-		gWindow = SDL_CreateWindow("Bootleg invaders: Now using an ECS", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+		gWindow = SDL_CreateWindow("Bootleg invaders: Now using ECS", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 		if (gWindow == NULL)
 		{
 			printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
@@ -184,7 +184,7 @@ int main(int argc, char* args[])
 
 
 		auto movementSystem = gCoordinator.RegisterSystem<MovementSystem>();
-		auto renderSystem = gCoordinator.RegisterSystem<RenderSystem>();
+		auto collisionSystem = gCoordinator.RegisterSystem<CollisionSystem>();
 
 		Signature signature;
 		signature.set(gCoordinator.GetComponentType<SpeedComponent>());
@@ -204,12 +204,13 @@ int main(int argc, char* args[])
 				Uint64 StartLoopTick = SDL_GetPerformanceCounter();
 				//SDL_Delay(300);
 				//Handle events on queue
-				while (SDL_PollEvent(&e) != 0)
+				if (SDL_PollEvent(&e) != 0)
 				{
 					//User requests quit
-					if (e.type == SDL_QUIT) // does not seem to work?
+					if (e.type == SDL_QUIT)  
 					{
-						quit = true;
+						close();
+						return 0;
 					}
 					else if (e.type == SDL_KEYDOWN) // this part is quite hacky, might fix later
 					{
@@ -249,7 +250,7 @@ int main(int argc, char* args[])
 				//Clear screen
 				SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, 0);
 				SDL_RenderClear(gRenderer); 
-				CurrentRenderObject = 0;
+				//CurrentRenderObject = 0;
 
 				//Draw player
 				SDL_Rect PositionToDraw = {PlayerX, PlayerY,  PlayerSize,  PlayerSize};
@@ -260,7 +261,7 @@ int main(int argc, char* args[])
 				//shot go up
 				if (ShotActive)
 				{
-					ShotY = ShotY - 3;
+					ShotY = ShotY - 6;
 					if (ShotY < 0)
 					{
 						ShotActive = false;
@@ -280,10 +281,11 @@ int main(int argc, char* args[])
 					SDL_Rect shotRect = { ShotX, ShotY, ShotLenght / 2, ShotLenght};
 					SDL_RenderFillRect(gRenderer, &shotRect);
 				}
-				bool WaveHasEnemies = false;
+				WaveHasEnemies = false;
 				// from this point using ECS
 				if (WaveActive)
 				{
+					collisionSystem->Update();
 					if (FramesSinceMoved > Movedelay)
 					{
 						movementSystem->Update();
@@ -293,39 +295,33 @@ int main(int argc, char* args[])
 					{
 						FramesSinceMoved++;
 					}
-				}
-				SDL_SetRenderDrawColor(gRenderer, 100, 255, 255, 255);
-				for (int i = 0; i < EnemiesPerWave; i++)
-				{
-					auto currentEnemy = EnemyPositions[i];
-					if (currentEnemy.y > SCREEN_HEIGHT - PlayerSize)
+
+					SDL_SetRenderDrawColor(gRenderer, 100, 255, 255, 255);
+					int i = 0;
+					for (auto& entity :Enemies)
 					{
-						quit = true;
-					}
-					if (currentEnemy.x < ShotX && ShotX < (currentEnemy.x + EnemySize))
-					{
-						if (currentEnemy.y < ShotY && ShotY < (currentEnemy.y + EnemySize))
-						{
-							AliveArray[i] = false;
-						}
-					}
-					/*if (currentEnemy.x == 0 && currentEnemy.y == 0)
-					{
-						AliveArray[i] = false;
-					}*/
-				}
-				for (int i = 0; i < EnemiesPerWave; i++)
-				{
-					if (AliveArray[i])
-					{
-						sprintf_s(buffer, "Rendering Enemy %d ", EnemyPositions[i].x);
+						auto& position = gCoordinator.GetComponent<PositionComponent>(entity);
+						//sprintf_s(buffer, "Rendering Enemy %d ", EnemyPositions[i].x);
 						//SDL_LogInfo(0, buffer);
-						SDL_RenderFillRect(gRenderer, &EnemyPositions[i]);
-						WaveHasEnemies = true;
+						//SDL_RenderFillRect(gRenderer, &EnemyPositions[i]);
+						if (position.alive)
+						{
+							SDL_LogInfo(0, "postion.alive entity %d i %d", entity, i);
+							SDL_RenderFillRect(gRenderer, &EnemyPositions[entity]);
+							WaveHasEnemies = true;
+						}
+						i++;
 					}
 				}
 				if (!WaveHasEnemies) // breaking my normal pattern here
 				{
+					if (WaveActive)
+					{
+						for (auto& entity : Enemies)
+						{
+							gCoordinator.DestroyEntity(entity);
+						}
+					}
 					WaveActive = false;
 				}
 
@@ -340,7 +336,6 @@ int main(int argc, char* args[])
 			}
 			//Free resources and close SDL
 			close();
-
 			return 0;
 	}
 	return 0;
@@ -355,6 +350,7 @@ void spawnWave()
 	else
 	{
 		int EnemyCount = 0;
+		EnemyCount = 0;
 		char buffer[50];
 		if (CurrentWave < MaxWaves)
 		{
@@ -376,10 +372,10 @@ void spawnWave()
 					gCoordinator.AddComponent(
 						entity,
 						LifeComponent{ true });
-					AliveArray[EnemyCount] = true;
+					//AliveArray[EnemyCount] = true;
 					EnemyCount++;
 				}
-				WaveActive;
+				WaveActive = true;
 
 		}
 		else
@@ -387,7 +383,7 @@ void spawnWave()
 			sprintf_s(buffer, "You win!");
 			SDL_LogInfo(0, buffer);
 		}
-		WaveActive = true;
+		//WaveActive = true;
 		CurrentWave = CurrentWave + 1;
 	}
 }
@@ -397,18 +393,41 @@ void MovementSystem::Update()
 	int x = 0;
 	int y = 0;
 	int i = 0;
-	for (auto const& entity : Enemies)
+	for (auto& entity : Enemies)
+	{
+	
+		auto& position = gCoordinator.GetComponent<PositionComponent>(entity);
+		if (position.alive)
+		{
+			auto& speed = gCoordinator.GetComponent<SpeedComponent>(entity);
+			position.y += speed.speed;
+			//SDL_LogInfo(0, "Movement system updating, entity %p speed %d", entity, speed);
+			x = position.x;
+			y = position.y;
+			EnemyPositions[entity] = { x, y, EnemySize, EnemySize };
+			SDL_LogInfo(0, "MovementSystem::Update %d i %d", entity, i);
+			i++;
+		}
+	}
+}
+void CollisionSystem::Update()
+{
+	for (auto& entity : Enemies)
 	{
 		auto& position = gCoordinator.GetComponent<PositionComponent>(entity);
-		auto& speed = gCoordinator.GetComponent<SpeedComponent>(entity);
-		position.y += speed.speed;
-
-
-		EnemyPositions[i] = { x, y, EnemySize, EnemySize };
-		x = position.x;
-		y = position.y;
-		i++;
+		//SDL_LogWarn(0, "CollisionSystem::Update %d position.x %d position.y %d", entity, position.x, position.y);
+		if (position.x < ShotX && ShotX < (position.x + EnemySize))
+		{
+			if (position.y < ShotY && ShotY < (position.y + EnemySize))
+			{
+				//SDL_LogWarn(0, "gCoordinator.DestroyEntity %d ", entity);
+				//gCoordinator.DestroyEntity(entity);
+				position.alive = false;
+			}
+		}
+		else if (position.y == SCREEN_HEIGHT)
+		{
+			close();
+		}
 	}
-	/*for (size_t i = 0; i <Enemies.size(); i++)
-	{}*/
 }
