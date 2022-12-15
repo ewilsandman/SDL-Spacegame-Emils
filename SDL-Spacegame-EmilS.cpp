@@ -6,6 +6,8 @@
 #include <time.h> // used for random generation
 #include "ECS.h"
 
+
+
 //Screen dimension constants
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 800;
@@ -59,39 +61,6 @@ SDL_Color ColoursToDraw[12];
 bool AliveArray[EnemiesPerWave];
 
 std::vector<Entity> Enemies(EnemiesPerWave);
-#if 0
-struct Enemy
-{
-	private:
-	int EnemyX = 0;
-	int EnemyY = 0;
-	int EnemySize = 50;
-	int Speed = 1;
-	bool Alive = false;
-	Enemy() // likely redundant
-	{
-#if 0
-		char Buffer[50];
-		sprintf_s(Buffer, "Helo ");
-		SDL_LogInfo(0, Buffer);
-#endif
-	}
-	/*void CheckAndPreformMove()
-	{
-		if (FramesSinceMoved >= Movedelay)
-		{
-			EnemyY= EnemyY + Speed;
-			FramesSinceMoved = 0;
-		}
-		else
-		{
-			FramesSinceMoved++;
-		}
-	}*/
-};
-
-//Enemy Enemies[10];
-#endif
 bool init()
 {
 	//Initialization flag
@@ -104,12 +73,6 @@ bool init()
 	}
 	else
 	{
-		//Set texture filtering to linear
-		if (!SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1"))
-		{
-			printf("Warning: Linear texture filtering not enabled!");
-		}
-
 		//Create window
 		gWindow = SDL_CreateWindow("Bootleg invaders: Now using ECS", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
 		if (gWindow == NULL)
@@ -127,13 +90,9 @@ bool init()
 				success = false;
 			}
 			else
-			{
-				//Initialize renderer color	
-				SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-			}
+			{}
 		}
 	}
-
 	return success;
 }
 
@@ -145,11 +104,6 @@ void playerShoot()
 	{
 		ShotX = PlayerX + PlayerSize / 2;
 		ShotY = SCREEN_HEIGHT - PlayerSize;
-#if 0
-		char ShotBuffer[50];
-		sprintf_s(ShotBuffer, "Firing shot %d", ShotY);
-		SDL_LogInfo(0, ShotBuffer);
-#endif
 		ShotActive = true;
 	}
 }
@@ -168,7 +122,7 @@ void close()
 
 int main(int argc, char* args[])
 {
-	char buffer[50];
+	
 	//Start up SDL and create window
 	if (!init())
 	{
@@ -193,9 +147,6 @@ int main(int argc, char* args[])
 
 		gCoordinator.SetSystemSignature<MovementSystem>(signature);
 
-		//Enemies.reserve(8);
-
-			srand((unsigned int)time(0));
 			bool quit = false;
 			SDL_Event e;
 			//While application is running
@@ -258,25 +209,15 @@ int main(int argc, char* args[])
 				SDL_SetRenderDrawColor(gRenderer, 255, 0, 0, 255);
 				SDL_RenderFillRect(gRenderer, &PositionToDraw);
 
-				//shot go up
 				if (ShotActive)
 				{
 					ShotY = ShotY - 6;
 					if (ShotY < 0)
 					{
 						ShotActive = false;
-# if debug
-						sprintf_s(buffer, "Disabling shot %d", ShotY);
-						SDL_LogInfo(0, buffer);
-#endif
 					}
 					else
-					{
-# if debug
-						sprintf_s(buffer, "Shot traversing %d", ShotY);
-						SDL_LogInfo(0, buffer);
-#endif
-					}
+					{}
 					SDL_SetRenderDrawColor(gRenderer, 100, 255, 255, 255);
 					SDL_Rect shotRect = { ShotX, ShotY, ShotLenght / 2, ShotLenght};
 					SDL_RenderFillRect(gRenderer, &shotRect);
@@ -301,12 +242,8 @@ int main(int argc, char* args[])
 					for (auto& entity :Enemies)
 					{
 						auto& position = gCoordinator.GetComponent<PositionComponent>(entity);
-						//sprintf_s(buffer, "Rendering Enemy %d ", EnemyPositions[i].x);
-						//SDL_LogInfo(0, buffer);
-						//SDL_RenderFillRect(gRenderer, &EnemyPositions[i]);
 						if (position.alive)
 						{
-							SDL_LogInfo(0, "postion.alive entity %d i %d", entity, i);
 							SDL_RenderFillRect(gRenderer, &EnemyPositions[entity]);
 							WaveHasEnemies = true;
 						}
@@ -329,10 +266,10 @@ int main(int argc, char* args[])
 				SDL_RenderPresent(gRenderer);
 
 				Uint64 EndLoopTick = SDL_GetPerformanceCounter();
-				float elapsedMS = (EndLoopTick - StartLoopTick) / (float)SDL_GetPerformanceFrequency() * 1000.0f;
+				Uint64 elapsedMS = (EndLoopTick - StartLoopTick) / (SDL_GetPerformanceFrequency() * 1000);
 
-				// Cap to 60 FPS
-				SDL_Delay(floor(16.666f - elapsedMS));
+				// Cap to 60 FPS, required otherwise game breaks
+				SDL_Delay((Uint32)floor(16.666f - elapsedMS));
 			}
 			//Free resources and close SDL
 			close();
@@ -358,7 +295,6 @@ void spawnWave()
 				for (auto& entity : Enemies)
 				{
 					int xPosition = PlayerSize / 2 + EnemyCount * EnemySize * 3;
-					SDL_LogInfo(0, "creating enemy, EnemyCount %d position %d",  EnemyCount, xPosition);
 					entity = gCoordinator.CreateEntity();
 
 					gCoordinator.AddComponent(
@@ -371,8 +307,7 @@ void spawnWave()
 
 					gCoordinator.AddComponent(
 						entity,
-						LifeComponent{ true });
-					//AliveArray[EnemyCount] = true;
+						LifeComponent{ true });;
 					EnemyCount++;
 				}
 				WaveActive = true;
@@ -383,7 +318,6 @@ void spawnWave()
 			sprintf_s(buffer, "You win!");
 			SDL_LogInfo(0, buffer);
 		}
-		//WaveActive = true;
 		CurrentWave = CurrentWave + 1;
 	}
 }
@@ -401,11 +335,9 @@ void MovementSystem::Update()
 		{
 			auto& speed = gCoordinator.GetComponent<SpeedComponent>(entity);
 			position.y += speed.speed;
-			//SDL_LogInfo(0, "Movement system updating, entity %p speed %d", entity, speed);
 			x = position.x;
 			y = position.y;
 			EnemyPositions[entity] = { x, y, EnemySize, EnemySize };
-			SDL_LogInfo(0, "MovementSystem::Update %d i %d", entity, i);
 			i++;
 		}
 	}
@@ -415,13 +347,10 @@ void CollisionSystem::Update()
 	for (auto& entity : Enemies)
 	{
 		auto& position = gCoordinator.GetComponent<PositionComponent>(entity);
-		//SDL_LogWarn(0, "CollisionSystem::Update %d position.x %d position.y %d", entity, position.x, position.y);
 		if (position.x < ShotX && ShotX < (position.x + EnemySize))
 		{
 			if (position.y < ShotY && ShotY < (position.y + EnemySize))
 			{
-				//SDL_LogWarn(0, "gCoordinator.DestroyEntity %d ", entity);
-				//gCoordinator.DestroyEntity(entity);
 				position.alive = false;
 			}
 		}
