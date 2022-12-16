@@ -3,7 +3,7 @@ Player moves with left and right arrow,
 shoots with up arrow,
 Spawns wave of enemies with down arrow
 
-Zip file contains standalone .exe
+Zip file contains standalone .exe and needed .dll
 # Data oriented Design
 
 The development of this game can be split in to three parts;
@@ -15,7 +15,6 @@ In order to comply with Data oriented design the enemies in the game use a Entit
 The ECS pattern stores values in memory without leaving gaps, greatly reducing cache misses.
 
 The Entity in this case is a individual enemy, comprising of just a unique ID.
-
 
 The Components are in this case the data used to describe a unique enemy, here they are all structs.
 ```
