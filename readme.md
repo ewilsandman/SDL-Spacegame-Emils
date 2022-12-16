@@ -3,7 +3,7 @@ Player moves with left and right arrow,
 shoots with up arrow,
 Spawns wave of enemies with down arrow
 
-Zip file contains standalone .exe and needed .dll
+SDL-Spacegame-EmilS.zip contains standalone .exe and needed .dll
 # Data oriented Design
 
 The development of this game can be split in to three parts;
