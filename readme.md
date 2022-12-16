@@ -6,8 +6,6 @@ Spawns wave of enemies with down arrow
 Zip file contains standalone .exe
 # Data oriented Design
 
-You must also submit a README.md document showing how you have created the system in a data oriented fashion.
-
 The development of this game can be split in to three parts;
 First I had to learn and experiment with SDL, starting out with a experimental build of SDL3 before moving to SDL2 stable.
 Then I studied Data oriented Design and experimented with my own data handling system that was not particularily efficient.
